@@ -11,17 +11,19 @@ Each student builds their own project:
 
 ----
 
-#### Task 1 (graded by TA after the lab).
+## Task 1 (graded by TA after the lab).
 Pen and paper quiz.
 - closed book, no devices allowed.
 - you get random 3 questions from the question bank.
 - answer at least 2 out of 3 correctly.
 
-#### Task 2 (approved by TA during the lab).
+## Task 2 (approved by TA during the lab).
 
 Ideate and plan your project.
 
-The **project idea** must be:
+
+### Project idea
+The project idea must be:
 - something simple to build;
 - clearly useful;
 - easy to explain.
@@ -31,26 +33,25 @@ Define and show to your TA:
 - Which problem your product solves for the end users
 - The product idea in one short sentence
 
-When the idea is approved, **produce a plan**:
-- prioritized features/functionality;
-- a clear breakdown of functionality into **two product versions.**
+### Implementation plan
 
-Two product versions:
-- Version 1 is a functioning product that does one core thing well. Pick the feature most valuable to the end-user and relatively easy to implement.
-- Test Version 1 upon completion, show it to the TA and take note of their feedback.
-- Version 2 builds upon Version 1 and takes TA feedback from the lab into account.
+When the idea is approved, produce a plan for two product versions.
 
-The product must have these components each fulfilling a useful function:
-- LLM-powered agent (preferably `nanobot`)
-- Frontend
-- Backend
-- Database
+Version 1 does one core thing well:
+- Pick the feature most valuable to the end-user and relatively easy to implement;
+- It is a functioning product, not a prototype;
+- Needs to be shown to the TA upon completion for feedback.
+
+Version 2 builds upon Version 1:
+- address TA feedback from the lab;
+- deploy and make it available to use.
 
 > 🟪 **Notes**
-> 1. You are advised to use the setup from Lab 8 as the base to iterate from.
-> 2. `Telegram` bots deployed on a university VM can fail to receive messages when hosted there.
+> 1. The product must have these components each fulfilling a useful function: LLM-powered agent (preferably `nanobot`), Frontend, Backend, Database.
+> 2. You are advised to use the setup from Lab 8 as the base to iterate from.
+> 3. `Telegram` bots deployed on a university VM can fail to receive messages when hosted there.
 
-#### Task 3 (product version 1 approved by TA during the lab).
+## Task 3 (product version 1 approved by TA during the lab).
 - Implement both versions outlined in the plan
 - Publish all code as a repo on github.
 - Dockerize all services.
@@ -60,7 +61,7 @@ Version 1 must be shown and approved by the TA during the lab.
 Version 2 can be done during the lab or after the lab before the usual deadline.
 
 
-#### Task 4.
+## Task 4.
 Submit presentation with five slides:
 
 1. Title:
@@ -90,7 +91,7 @@ Submit presentation with five slides:
 
 ----
 
-#### Publishing the product code on GitHub
+## Publishing the product code on GitHub
 
 - Publish the product code in a repository on `GitHub`.
 
