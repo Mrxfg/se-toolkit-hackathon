@@ -1,170 +1,330 @@
-# Lab 9 - Quiz and Hackathon
+# 🚗 CarBot - Telegram Car Marketplace Bot
 
-The lab opens with a quiz and then kicks off the hackathon.
+A feature-rich Telegram bot for buying and selling cars, built with Python and FastAPI.
 
-To get the full point for the lab, you need to:
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+[![python-telegram-bot](https://img.shields.io/badge/python--telegram--bot-20.0+-blue.svg)](https://python-telegram-bot.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13+-blue.svg)](https://www.postgresql.org/)
 
-- Pass Tasks 1, 2, 3 during the lab AND
-- Finish Tasks 4 and 5 by the usual deadline of Thursday 23:59.
+## ✨ Features
 
-Each student builds their own project:
+### For Sellers
+- 📝 **Easy Listing** - Step-by-step car listing process
+- ✏️ **Edit Listings** - Menu-based editing of any field
+- 🗑️ **Delete Listings** - Remove cars with confirmation
+- 📍 **Location Support** - GPS or city name
 
-- Go from an idea to a deployed product.
-- Use agents and LLMs throughout.
+### For Buyers
+- 🔍 **Smart Search** - Search by brand or model
+- 📋 **Browse by Brand** - Filter cars by manufacturer
+- 📄 **Pagination** - Navigate through results easily
+- 💰 **Detailed Info** - Price, mileage, description, location
 
-----
+### Technical Features
+- ✅ **Input Validation** - Pydantic models with range checks
+- 🔒 **Ownership Verification** - Users can only edit/delete their own cars
+- 🚀 **Performance** - Database indexes for fast searches
+- 🛡️ **Error Handling** - Detailed error messages
+- 📱 **Clean UX** - Keyboard management, clear prompts
 
-## Task 1 (graded by TA after the lab)
+## 🏗️ Architecture
 
-Pen and paper quiz:
+```
+carbot/
+├── carbot-backend/        # FastAPI REST API
+│   ├── main.py           # API endpoints
+│   ├── db.py             # Database connection
+│   ├── migrate.py        # Migration script
+│   └── migrations.sql    # SQL migrations
+│
+└── bot/                   # Telegram Bot
+    ├── main.py           # Entry point
+    ├── config.py         # Configuration
+    ├── states.py         # Conversation states
+    ├── services/         # Business logic
+    ├── handlers/         # Command handlers
+    └── keyboards/        # UI components
+```
 
-- 20 mins;
-- closed book, no devices;
-- you get 3 random questions from the question bank;
-- answer at least 2.
+## 🚀 Quick Start
 
-## Task 2 (approved by TA during the lab)
+### Option 1: Docker (Recommended) 🐳
 
-Ideate and plan your project.
+The easiest way to run CarBot:
 
-### Project idea
+```bash
+# 1. Clone repository
+git clone https://github.com/yourusername/carbot.git
+cd carbot
 
-The project idea must be:
+# 2. Configure bot token
+cd bot
+cp .env.example .env
+# Edit .env and add your BOT_TOKEN
 
-- something simple to build;
-- clearly useful;
-- easy to explain.
+# 3. Start everything
+cd ..
+docker-compose up --build
 
-Define and show to your TA:
+# 4. Run migrations (in new terminal)
+docker exec -it carbot-backend python migrate.py
+```
 
-- End-user of the product
-- What problem your product solves for the end-user?
-- The product idea in one short sentence.
-- What is the product's core feature?
+That's it! Your bot is now running. See [DOCKER.md](DOCKER.md) for detailed Docker instructions.
 
-### Implementation plan
+### Option 2: Manual Setup
 
-When the idea is approved, produce a plan for two product versions.
+<details>
+<summary>Click to expand manual setup instructions</summary>
 
-Version 1 does one core thing well:
+### Prerequisites
 
-- Pick the one feature most valuable to the end-user and relatively easy to implement;
-- It is a functioning product, not a prototype;
-- Must be shown to the TA upon completion for feedback.
+- Python 3.9+
+- PostgreSQL 13+
+- Telegram Bot Token ([Get one from @BotFather](https://t.me/botfather))
 
-Version 2 builds upon Version 1:
+### 1. Clone Repository
 
-- Improves the initial feature or adds another one on top;
-- Address TA feedback from the lab;
-- Deploy and make it available for use.
+```bash
+git clone https://github.com/yourusername/carbot.git
+cd carbot
+```
 
-The product must have the following components, each fulfilling a useful function:
+### 2. Setup Database
 
-- backend;
-- database;
-- end-user-facing client: web app, mobile app, or LLM-powered agent, e.g. `nanobot`.
+```sql
+CREATE DATABASE carbot;
 
-Note:
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    telegram_id BIGINT UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL
+);
 
-- You can use the setup from Lab 8 or start from scratch.
-- `Telegram` bots are blocked on university VMs.
+CREATE TABLE cars (
+    id SERIAL PRIMARY KEY,
+    make VARCHAR(50) NOT NULL,
+    model VARCHAR(50) NOT NULL,
+    year INTEGER NOT NULL,
+    price INTEGER NOT NULL,
+    mileage INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    latitude FLOAT,
+    longitude FLOAT,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+);
+```
 
-## Task 3 (approved by TA during the lab)
+### 3. Run Migrations
 
-Implement Version 1 outlined in the plan:
+```bash
+cd carbot-backend
+pip install -r requirements.txt
 
-- Build one core feature;
-- Follow best practices and git workflow;
-- Test it yourself and fix bugs;
-- Have the TA try it as a user;
-- Take note of the TA feedback;
-- Get TA's approval for the task to be marked as DONE.
+# Create .env file
+cat > .env << EOF
+DB_NAME=carbot
+DB_USER=postgres
+DB_PASSWORD=yourpassword
+DB_HOST=localhost
+DB_PORT=5432
+EOF
 
-## Task 4
+# Run migrations
+python migrate.py
+```
 
-Implement and deploy Version 2 outlined in the plan:
+### 4. Start Backend
 
-- Build and polish functionality;
-- Take TA feedback into account;
-- Push all code to the GitHub repo (see the detailed instructions below);
-- Follow best practices and git workflow;
-- Document your solution;
-- Dockerize all services;
-- Deploy it to be accessible to use.
+```bash
+cd carbot-backend
+uvicorn main:app --reload
+```
 
-Version 2 can be completed during the lab or after it, before the usual deadline.
+Backend will run on `http://localhost:8000`
 
-## Task 5 (demo and PDF submitted through Moodle)
+### 5. Start Bot
 
-Submit a presentation with five slides:
+```bash
+cd bot
+pip install -r requirements.txt
 
-1. Title:
+# Create .env file
+cat > .env << EOF
+BOT_TOKEN=your_telegram_bot_token_here
+EOF
 
-   - Product title
-   - Your name
-   - Your university email
-   - Your group
+# Run bot
+python main.py
+```
 
-2. Context:
+</details>
 
-   - End-user of the product
-   - What problem your product solves
-   - The product idea in one short sentence
+## 🐳 Docker
 
-3. Implementation:
+### Services
 
-   - How you built the product
-   - What went into Version 1 and Version 2
-   - What TA feedback points you addressed
+- **PostgreSQL** - Database (port 5432)
+- **FastAPI Backend** - REST API (port 8000)
+- **Telegram Bot** - Bot application
 
-4. Demo:
+### Commands
 
-   - Pre-recorded video demonstration of Version 2 with voice-over (no longer than 2 minutes).
-   - _Note:_ **This is the most important part of the presentation**.
+```bash
+# Start all services
+docker-compose up --build
 
-5. Links:
+# View logs
+docker-compose logs -f
 
-   - Link and QR code for each of these:
-     - The GitHub repo with the product code
-     - Deployed product (latest version)
+# Stop services
+docker-compose down
 
-----
+# Run migrations
+docker exec -it carbot-backend python migrate.py
+```
 
-## Publishing the product code on GitHub
+See [DOCKER.md](DOCKER.md) for complete Docker documentation.
 
-- Publish the product code in a repository on `GitHub`.
+## 📦 Dependencies
 
-  The repository must be called `se-toolkit-hackathon`.
+### Backend
+```txt
+fastapi==0.100.0
+uvicorn==0.23.0
+psycopg2-binary==2.9.6
+pydantic==2.0.0
+python-dotenv==1.0.0
+```
 
-- Add the MIT license file to make your product open-source.
+### Bot
+```txt
+python-telegram-bot==20.3
+requests==2.31.0
+python-dotenv==1.0.0
+```
 
-- Add `README.md` in the product repository.
+## 🎮 Usage
 
-  `README.md` structure:
+### Commands
 
-  - Product name (as title)
+- `/start` - Start the bot and show main menu
+- `/sell` - List a new car for sale
+- `/search <query>` - Search for cars (e.g., `/search toyota`)
+- `/listings` - Browse cars by brand
+- `/mycars` - View your listed cars
 
-  - One-line description
+### Main Menu
 
-  - Demo:
-    - A couple of relevant screenshots of the product
+```
+[Sell 🚗]  [Listings 📋]
+[Search 🔍] [My Cars 👤]
+```
 
-  - Product context:
+### Sell Flow
 
-    - End users
-    - Problem that your product solves for end users
-    - Your solution
+1. Choose brand (Toyota, BMW, Mercedes, Opel, or Other)
+2. Enter model
+3. Enter year
+4. Enter price
+5. Enter mileage
+6. Enter description
+7. Send location (GPS or city name)
 
-  - Features:
+### Edit Flow
 
-    - Implemented and not yet implemented features
+1. Go to "My Cars 👤"
+2. Click "✏️ Edit" on any car
+3. Select field to edit from menu
+4. Enter new value
+5. Click "✅ Save Changes"
 
-  - Usage:
+## 🔧 Configuration
 
-    - Explain how to use your product
+### Backend (`carbot-backend/.env`)
 
-  - Deployment:
+```env
+DB_NAME=carbot
+DB_USER=postgres
+DB_PASSWORD=yourpassword
+DB_HOST=localhost
+DB_PORT=5432
+```
 
-    - Which OS the VM should run on (you may assume `Ubuntu 24.04` like on your university VMs)
-    - What should be installed on the VM
-    - Step-by-step deployment instructions
+### Bot (`bot/.env`)
+
+```env
+BOT_TOKEN=your_telegram_bot_token
+```
+
+## 🗄️ Database Schema
+
+### Users Table
+| Column | Type | Description |
+|--------|------|-------------|
+| id | SERIAL | Primary key |
+| telegram_id | BIGINT | Telegram user ID (unique) |
+| name | VARCHAR(255) | User's first name |
+
+### Cars Table
+| Column | Type | Description |
+|--------|------|-------------|
+| id | SERIAL | Primary key |
+| make | VARCHAR(50) | Car brand |
+| model | VARCHAR(50) | Car model |
+| year | INTEGER | Manufacturing year |
+| price | INTEGER | Price in USD |
+| mileage | INTEGER | Mileage in km |
+| description | TEXT | Car description |
+| created_at | TIMESTAMP | Creation timestamp |
+| latitude | FLOAT | Location latitude |
+| longitude | FLOAT | Location longitude |
+| user_id | INTEGER | Foreign key to users |
+
+## 🔒 Security Features
+
+- ✅ Input validation with Pydantic
+- ✅ SQL injection prevention (parameterized queries)
+- ✅ Ownership verification for edit/delete
+- ✅ Proper HTTP status codes (403, 404, 500)
+- ✅ Database constraints (NOT NULL, CHECK, FOREIGN KEY)
+
+## 🚀 Performance Optimizations
+
+- 📊 Database indexes on `make`, `model`, `user_id`
+- 🔍 Trigram indexes for fast ILIKE searches
+- 📄 Pagination (5 results per page)
+- ⚡ Connection pooling ready
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [python-telegram-bot](https://python-telegram-bot.org/) - Telegram Bot API wrapper
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern web framework
+- [PostgreSQL](https://www.postgresql.org/) - Database
+- [Nominatim](https://nominatim.org/) - Geocoding service
+
+## 📧 Contact
+
+Your Name - [@yourtelegram](https://t.me/yourusername)
+
+Project Link: [https://github.com/yourusername/carbot](https://github.com/yourusername/carbot)
+
+---
+
+Made with ❤️ and Python

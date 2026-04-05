@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: postgres:15
+    container_name: carbot-db
+    restart: always
+    environment:
+      POSTGRES_DB: carbot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./carbot-backend
+    container_name: carbot-backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DB_NAME: carbot
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      DB_HOST: db
+      DB_PORT: 5432
+    ports:
+      - "8000:8000"
+
+  bot:
+    build: ./bot
+    container_name: carbot-bot
+    restart: always
+    depends_on:
+      - backend
+    env_file:
+      - ./bot/.env
+
+volumes:
+  postgres_data:
