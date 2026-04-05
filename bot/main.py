@@ -16,10 +16,13 @@ from handlers.search import search_command, search_input
 from handlers.listings import listings
 from handlers.mycars import mycars
 from handlers.edit import start_edit, edit_field_select, edit_value_input
-from services.api import search_cars, delete_car
+from services.api import search_cars, delete_car, get_car_images
 from keyboards.inline import (
     delete_confirmation, pagination_buttons, search_pagination_buttons
 )
+from helpers.display import send_car_with_photos
+import base64
+import io
 
 
 # ======================
@@ -149,18 +152,12 @@ async def handle_button(update: Update, context):
                 await query.edit_message_text("No cars ❌")
                 return
 
-            text = "\n\n".join([
-                f"🚗 {c['make']} {c['model']}\n💰 ${c['price']}"
-                for c in cars
-            ])
+            await query.answer()
 
-            keyboard = pagination_buttons(brand, 0, len(cars) == 5)
-            if keyboard:
-                keyboard.inline_keyboard.append(
-                    [{"text": "⬅ Back", "callback_data": "back"}]
-                )
+            # Send each car with photos
+            for car in cars:
+                await send_car_with_photos(query, car)
 
-            await query.edit_message_text(text, reply_markup=keyboard)
         except Exception as e:
             await query.edit_message_text("Error loading cars ❌")
         return
