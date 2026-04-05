@@ -82,3 +82,32 @@ def geocode_location(location_text):
         timeout=5
     )
     return res.json()
+
+def upload_car_image(car_id, telegram_id, image_file):
+    """Upload an image for a car"""
+    files = {"file": image_file}
+    res = requests.post(
+        f"{API_URL}/cars/{car_id}/images",
+        params={"telegram_id": telegram_id},
+        files=files,
+        timeout=10
+    )
+    return res
+
+
+def get_car_images(car_id):
+    """Get all images for a car"""
+    res = requests.get(f"{API_URL}/cars/{car_id}/images", timeout=5)
+    res.raise_for_status()
+    return res.json()
+
+
+def delete_car_image(car_id, image_id, telegram_id):
+    """Delete a car image"""
+    res = requests.delete(
+        f"{API_URL}/cars/{car_id}/images/{image_id}",
+        params={"telegram_id": telegram_id},
+        timeout=5
+    )
+    res.raise_for_status()
+    return res.json()

@@ -39,6 +39,17 @@ def run_migrations():
             );
         """)
 
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS car_images (
+                id SERIAL PRIMARY KEY,
+                car_id INTEGER NOT NULL,
+                image_data BYTEA NOT NULL,
+                image_order INTEGER DEFAULT 0,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+            );
+        """)
+
         # Enable pg_trgm extension for better text search
         print("1. Enabling pg_trgm extension...")
         cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
@@ -160,6 +171,11 @@ def run_migrations():
         print("8. Creating trigram indexes for text search...")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_cars_make_trgm ON cars USING gin (make gin_trgm_ops);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_cars_model_trgm ON cars USING gin (model gin_trgm_ops);")
+
+        # Add indexes for car_images
+        print("9. Creating indexes for car_images...")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_car_images_car_id ON car_images (car_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_car_images_order ON car_images (car_id, image_order);")
 
         conn.commit()
         print("\n✅ All migrations completed successfully!")

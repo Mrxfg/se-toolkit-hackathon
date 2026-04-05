@@ -11,7 +11,7 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from states import *
 from handlers.start import start
-from handlers.sell import sell, make, model, year, price, mileage, desc, location
+from handlers.sell import sell, make, model, year, price, mileage, desc, location, photos
 from handlers.search import search_command, search_input
 from handlers.listings import listings
 from handlers.mycars import mycars
@@ -179,6 +179,7 @@ sell_conv = ConversationHandler(
         MILEAGE: [MessageHandler(filters.TEXT, mileage)],
         DESC: [MessageHandler(filters.TEXT, desc)],
         LOCATION: [MessageHandler(filters.TEXT | filters.LOCATION, location)],
+        PHOTOS: [MessageHandler(filters.PHOTO | filters.TEXT, photos)],
     },
     fallbacks=[]
 )

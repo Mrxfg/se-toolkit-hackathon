@@ -5,9 +5,9 @@ Sell flow handler
 import re
 from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
-from services.api import get_or_create_user, add_car, geocode_location
+from services.api import get_or_create_user, add_car, geocode_location, upload_car_image
 from keyboards.menus import brand_selection, location_keyboard, post_add_menu
-from states import MAKE, MODEL, YEAR, PRICE, MILEAGE, DESC, LOCATION
+from states import MAKE, MODEL, YEAR, PRICE, MILEAGE, DESC, LOCATION, PHOTOS
 
 
 async def sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -136,21 +136,84 @@ async def location(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lat = float(geo[0]["lat"])
             lon = float(geo[0]["lon"])
 
-        car = {
-            **context.user_data,
-            "latitude": lat,
-            "longitude": lon,
-            "user_id": user_id
-        }
-
-        add_car(car)
+        context.user_data["latitude"] = lat
+        context.user_data["longitude"] = lon
 
         await update.message.reply_text(
-            "Car added successfully ✅\nWhat would you like to do next?",
-            reply_markup=post_add_menu()
+            "📸 Send up to 5 photos of your car (or type 'skip' to finish):",
+            reply_markup=ReplyKeyboardRemove()
         )
-        return ConversationHandler.END
+        context.user_data["photos"] = []
+        return PHOTOS
 
     except Exception as e:
-        await update.message.reply_text("Error adding car ❌")
+        await update.message.reply_text("Error processing location ❌")
         return LOCATION
+
+
+async def photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle photo uploads"""
+    user_id = get_or_create_user(
+        update.effective_user.id,
+        update.effective_user.first_name
+    )
+
+    # Check if user wants to skip or finish
+    if update.message.text and update.message.text.lower() in ['skip', 'done', 'finish']:
+        # Save car without photos or with collected photos
+        try:
+            car = {
+                "make": context.user_data["make"],
+                "model": context.user_data["model"],
+                "year": context.user_data["year"],
+                "price": context.user_data["price"],
+                "mileage": context.user_data["mileage"],
+                "description": context.user_data["description"],
+                "latitude": context.user_data["latitude"],
+                "longitude": context.user_data["longitude"],
+                "user_id": user_id
+            }
+
+            result = add_car(car)
+            car_id = result.get("id")
+
+            # Upload collected photos
+            photos = context.user_data.get("photos", [])
+            for photo_file in photos:
+                upload_car_image(car_id, update.effective_user.id, photo_file)
+
+            await update.message.reply_text(
+                f"Car added successfully ✅\n{len(photos)} photo(s) uploaded\n\nWhat would you like to do next?",
+                reply_markup=post_add_menu()
+            )
+            return ConversationHandler.END
+
+        except Exception as e:
+            await update.message.reply_text(f"Error adding car ❌")
+            return ConversationHandler.END
+
+    # Handle photo upload
+    if update.message.photo:
+        photos = context.user_data.get("photos", [])
+
+        if len(photos) >= 5:
+            await update.message.reply_text("Maximum 5 photos reached. Type 'done' to finish.")
+            return PHOTOS
+
+        # Get the largest photo
+        photo = update.message.photo[-1]
+        photo_file = await photo.get_file()
+        photo_bytes = await photo_file.download_as_bytearray()
+
+        photos.append(("image.jpg", photo_bytes, "image/jpeg"))
+        context.user_data["photos"] = photos
+
+        remaining = 5 - len(photos)
+        await update.message.reply_text(
+            f"✅ Photo {len(photos)}/5 added\n"
+            f"Send {remaining} more photo(s) or type 'done' to finish"
+        )
+        return PHOTOS
+
+    await update.message.reply_text("Please send a photo or type 'skip' to finish")
+    return PHOTOS
