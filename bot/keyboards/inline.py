@@ -44,6 +44,7 @@ def edit_menu():
         [InlineKeyboardButton("📏 Mileage", callback_data="editfield_mileage")],
         [InlineKeyboardButton("📄 Description", callback_data="editfield_description")],
         [InlineKeyboardButton("📍 Location", callback_data="editfield_location")],
+        [InlineKeyboardButton("📸 Photos", callback_data="editfield_photos")],
         [InlineKeyboardButton("✅ Save Changes", callback_data="editsave")],
         [InlineKeyboardButton("❌ Cancel", callback_data="editcancel")]
     ]

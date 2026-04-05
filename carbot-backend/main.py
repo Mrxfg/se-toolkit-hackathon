@@ -4,6 +4,7 @@ from typing import Optional, List
 from db import get_connection
 from PIL import Image
 import io
+import base64
 
 app = FastAPI()
 
@@ -448,7 +449,7 @@ def get_car_images(car_id: int):
         for row in cur.fetchall():
             images.append({
                 "id": row[0],
-                "image_data": row[1].tobytes(),
+                "image_data": base64.b64encode(row[1].tobytes()).decode("utf-8"),
                 "order": row[2]
             })
 

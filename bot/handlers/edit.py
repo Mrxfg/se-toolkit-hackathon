@@ -5,7 +5,7 @@ Edit flow handler
 import re
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
-from services.api import get_user_cars, update_car, geocode_location
+from services.api import get_user_cars, update_car, geocode_location, get_car_images, upload_car_image, delete_car_image
 from keyboards.inline import edit_menu
 from keyboards.menus import post_edit_menu
 from states import EDIT_FIELD_SELECT, EDIT_VALUE_INPUT
@@ -25,7 +25,7 @@ async def start_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         car = next((c for c in cars if c['id'] == int(car_id)), None)
 
         if not car:
-            await query.edit_message_text("Car not found ❌")
+            await query.message.reply_text("Car not found ❌")
             return ConversationHandler.END
 
         # Store car data for editing
@@ -43,14 +43,15 @@ async def start_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         car_info = f"🚗 {car['make']} {car['model']} ({car['year']})\n💰 ${car['price']}\n📏 {car['mileage']} km\n\nSelect field to edit:"
 
-        await query.edit_message_text(
+        # Send new message instead of editing (in case original was a photo)
+        await query.message.reply_text(
             car_info,
             reply_markup=edit_menu()
         )
         return EDIT_FIELD_SELECT
 
     except Exception as e:
-        await query.edit_message_text(f"Error loading car: {str(e)}")
+        await query.message.reply_text(f"Error loading car: {str(e)}")
         return ConversationHandler.END
 
 
@@ -117,8 +118,28 @@ async def edit_field_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "price": "price (e.g., 15000)",
             "mileage": "mileage (e.g., 50000)",
             "description": "description",
-            "location": "location (city name or send GPS)"
+            "location": "location (city name or send GPS)",
+            "photos": "photos"
         }
+
+        # Handle photos separately
+        if field == "photos":
+            car_id = context.user_data["edit_car_id"]
+            try:
+                images = get_car_images(car_id)
+                photo_count = len(images)
+                remaining = 5 - photo_count
+
+                await query.edit_message_text(
+                    f"📸 Current photos: {photo_count}/5\n\n"
+                    f"Send up to {remaining} more photo(s) or type 'done' to finish.\n"
+                    f"Type 'delete' to remove all photos."
+                )
+                context.user_data["managing_photos"] = True
+                return EDIT_VALUE_INPUT
+            except:
+                await query.edit_message_text("Error loading photos ❌")
+                return EDIT_FIELD_SELECT
 
         current_value = context.user_data["edit_car_data"].get(field, "")
 
@@ -136,6 +157,65 @@ async def edit_value_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     value = update.message.text
 
     try:
+        # Handle photo management
+        if context.user_data.get("managing_photos"):
+            car_id = context.user_data["edit_car_id"]
+            tid = update.effective_user.id
+
+            # Handle delete all photos
+            if value and value.lower() == "delete":
+                try:
+                    images = get_car_images(car_id)
+                    for img in images:
+                        delete_car_image(car_id, img['id'], tid)
+                    await update.message.reply_text("✅ All photos deleted")
+                except:
+                    await update.message.reply_text("❌ Error deleting photos")
+
+                context.user_data.pop("managing_photos", None)
+                car_data = context.user_data["edit_car_data"]
+                car_info = f"🚗 {car_data['make']} {car_data['model']} ({car_data['year']})\n💰 ${car_data['price']}\n📏 {car_data['mileage']} km\n\nSelect another field or save:"
+                await update.message.reply_text(car_info, reply_markup=edit_menu())
+                return EDIT_FIELD_SELECT
+
+            # Handle done
+            if value and value.lower() in ['done', 'finish']:
+                context.user_data.pop("managing_photos", None)
+                car_data = context.user_data["edit_car_data"]
+                car_info = f"🚗 {car_data['make']} {car_data['model']} ({car_data['year']})\n💰 ${car_data['price']}\n📏 {car_data['mileage']} km\n\nSelect another field or save:"
+                await update.message.reply_text(car_info, reply_markup=edit_menu())
+                return EDIT_FIELD_SELECT
+
+            # Handle photo upload
+            if update.message.photo:
+                try:
+                    images = get_car_images(car_id)
+                    if len(images) >= 5:
+                        await update.message.reply_text("Maximum 5 photos reached. Type 'done' to finish.")
+                        return EDIT_VALUE_INPUT
+
+                    photo = update.message.photo[-1]
+                    photo_file = await photo.get_file()
+                    photo_bytes = await photo_file.download_as_bytearray()
+
+                    res = upload_car_image(car_id, tid, ("image.jpg", photo_bytes, "image/jpeg"))
+
+                    if res.status_code == 200:
+                        remaining = 4 - len(images)
+                        await update.message.reply_text(
+                            f"✅ Photo added ({len(images) + 1}/5)\n"
+                            f"Send {remaining} more or type 'done'"
+                        )
+                    else:
+                        await update.message.reply_text("❌ Error uploading photo")
+                except Exception as e:
+                    await update.message.reply_text(f"❌ Error: {str(e)}")
+
+                return EDIT_VALUE_INPUT
+
+            await update.message.reply_text("Send a photo or type 'done' to finish")
+            return EDIT_VALUE_INPUT
+
         # Handle location separately
         if field == "location":
             if update.message.location:

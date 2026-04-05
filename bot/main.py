@@ -188,7 +188,7 @@ edit_conv = ConversationHandler(
     entry_points=[CallbackQueryHandler(start_edit, pattern="^edit_\\d+$")],
     states={
         EDIT_FIELD_SELECT: [CallbackQueryHandler(edit_field_select)],
-        EDIT_VALUE_INPUT: [MessageHandler(filters.TEXT | filters.LOCATION, edit_value_input)],
+        EDIT_VALUE_INPUT: [MessageHandler(filters.TEXT | filters.LOCATION | filters.PHOTO, edit_value_input)],
     },
     fallbacks=[CallbackQueryHandler(edit_field_select, pattern="^editcancel$")],
     per_chat=True,

@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 from services.api import get_user_cars, get_car_images
 from keyboards.inline import car_actions
 import io
+import base64
 
 
 async def mycars(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -28,10 +29,12 @@ async def mycars(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 images = get_car_images(car['id'])
 
                 if images and len(images) > 0:
+                    # Decode base64 image data
+                    first_img_bytes = base64.b64decode(images[0]['image_data'])
+
                     # Send first image with caption
-                    first_img = images[0]
                     await update.message.reply_photo(
-                        photo=io.BytesIO(first_img['image_data']),
+                        photo=io.BytesIO(first_img_bytes),
                         caption=text,
                         reply_markup=car_actions(car['id'])
                     )
@@ -39,7 +42,7 @@ async def mycars(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     # Send remaining images as media group if any
                     if len(images) > 1:
                         media_group = [
-                            InputMediaPhoto(media=io.BytesIO(img['image_data']))
+                            InputMediaPhoto(media=io.BytesIO(base64.b64decode(img['image_data'])))
                             for img in images[1:]
                         ]
                         await update.message.reply_media_group(media=media_group)
