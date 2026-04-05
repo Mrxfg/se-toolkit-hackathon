@@ -2,6 +2,8 @@
 
 A feature-rich Telegram bot for buying and selling cars, built with Python and FastAPI.
 
+**🤖 Try it now:** [@Carsallesbot](https://t.me/Carsallesbot)
+
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![python-telegram-bot](https://img.shields.io/badge/python--telegram--bot-20.0+-blue.svg)](https://python-telegram-bot.org/)
