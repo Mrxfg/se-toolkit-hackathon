@@ -8,9 +8,22 @@ import io
 import base64
 
 
-async def send_car_with_photos(update, car, reply_markup=None):
-    """Send a car listing with photos if available"""
+async def send_car_with_photos(update, car, reply_markup=None, show_contact=False):
+    """Send a car listing with photos if available
+
+    Args:
+        update: Telegram update object
+        car: Car data dictionary
+        reply_markup: Optional inline keyboard
+        show_contact: If True, adds contact seller button
+    """
+    from keyboards.inline import car_view_actions
+
     text = f"🚗 {car['make']} {car['model']} ({car['year']})\n💰 ${car['price']}\n📏 {car['mileage']} km\n📝 {car['description']}"
+
+    # Use contact button if requested and no other markup provided
+    if show_contact and reply_markup is None:
+        reply_markup = car_view_actions(car['id'])
 
     try:
         images = get_car_images(car['id'])

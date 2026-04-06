@@ -9,7 +9,8 @@ def main_menu():
     """Main menu keyboard"""
     keyboard = [
         ["Sell 🚗", "Listings 📋"],
-        ["Search 🔍", "My Cars 👤"]
+        ["Search 🔍", "My Cars 👤"],
+        ["Inbox 📬"]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
