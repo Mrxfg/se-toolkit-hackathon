@@ -38,3 +38,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Backup files
+*.backup
+*.bak
+*~
