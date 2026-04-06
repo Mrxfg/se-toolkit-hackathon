@@ -15,6 +15,7 @@ app = FastAPI()
 class UserCreate(BaseModel):
     telegram_id: int
     name: str = ""
+    telegram_username: str = ""
 
 class UserUpdate(BaseModel):
     telegram_id: int
@@ -63,11 +64,11 @@ def create_user(user: UserCreate):
 
         cur.execute(
             """
-            INSERT INTO users (telegram_id, name)
-            VALUES (%s, %s)
+            INSERT INTO users (telegram_id, name, telegram_username)
+            VALUES (%s, %s, %s)
             RETURNING id;
             """,
-            (user.telegram_id, user.name)
+            (user.telegram_id, user.name, user.telegram_username)
         )
 
         user_id = cur.fetchone()[0]
@@ -492,6 +493,185 @@ def delete_car_image(car_id: int, image_id: int, telegram_id: int):
 
         conn.commit()
         return {"status": "deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/cars/{car_id}/seller")
+def get_seller_info(car_id: int):
+    """Get seller information for a car"""
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            SELECT u.telegram_id, u.name, u.telegram_username
+            FROM users u
+            JOIN cars c ON c.user_id = u.id
+            WHERE c.id = %s
+            """,
+            (car_id,)
+        )
+
+        row = cur.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Car or seller not found")
+
+        return {
+            "telegram_id": row[0],
+            "name": row[1],
+            "telegram_username": row[2]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+# =====================
+# MESSAGES
+# =====================
+
+class MessageCreate(BaseModel):
+    car_id: int
+    from_telegram_id: int
+    to_telegram_id: int
+    message_text: str = Field(..., min_length=1, max_length=1000)
+
+
+@app.post("/messages")
+def send_message(message: MessageCreate):
+    """Send a message from buyer to seller"""
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        # Get user IDs from telegram IDs
+        cur.execute("SELECT id FROM users WHERE telegram_id = %s", (message.from_telegram_id,))
+        from_user = cur.fetchone()
+
+        cur.execute("SELECT id FROM users WHERE telegram_id = %s", (message.to_telegram_id,))
+        to_user = cur.fetchone()
+
+        if not from_user or not to_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Insert message
+        cur.execute(
+            """
+            INSERT INTO messages (car_id, from_user_id, to_user_id, message_text)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id;
+            """,
+            (message.car_id, from_user[0], to_user[0], message.message_text)
+        )
+
+        message_id = cur.fetchone()[0]
+        conn.commit()
+
+        return {"id": message_id, "status": "sent"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/messages/inbox/{telegram_id}")
+def get_inbox(telegram_id: int, unread_only: bool = False):
+    """Get messages for a user"""
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        # Get user ID
+        cur.execute("SELECT id FROM users WHERE telegram_id = %s", (telegram_id,))
+        user = cur.fetchone()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        query = """
+            SELECT
+                m.id, m.car_id, m.message_text, m.created_at, m.is_read,
+                u.name as sender_name, u.telegram_id as sender_telegram_id,
+                c.make, c.model
+            FROM messages m
+            JOIN users u ON m.from_user_id = u.id
+            JOIN cars c ON m.car_id = c.id
+            WHERE m.to_user_id = %s
+        """
+
+        if unread_only:
+            query += " AND m.is_read = FALSE"
+
+        query += " ORDER BY m.created_at DESC"
+
+        cur.execute(query, (user[0],))
+        rows = cur.fetchall()
+
+        messages = []
+        for row in rows:
+            messages.append({
+                "id": row[0],
+                "car_id": row[1],
+                "message_text": row[2],
+                "created_at": str(row[3]),
+                "is_read": row[4],
+                "sender_name": row[5],
+                "sender_telegram_id": row[6],
+                "car_make": row[7],
+                "car_model": row[8]
+            })
+
+        return messages
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.put("/messages/{message_id}/read")
+def mark_message_read(message_id: int, telegram_id: int):
+    """Mark a message as read"""
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        # Verify ownership
+        cur.execute(
+            """
+            SELECT m.id FROM messages m
+            JOIN users u ON m.to_user_id = u.id
+            WHERE m.id = %s AND u.telegram_id = %s
+            """,
+            (message_id, telegram_id)
+        )
+
+        if not cur.fetchone():
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        cur.execute("UPDATE messages SET is_read = TRUE WHERE id = %s", (message_id,))
+        conn.commit()
+
+        return {"status": "marked_read"}
     except HTTPException:
         raise
     except Exception as e:

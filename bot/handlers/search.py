@@ -24,9 +24,9 @@ async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("No results ❌")
             return
 
-        # Send each car with photos
+        # Send each car with photos and contact button
         for car in cars:
-            await send_car_with_photos(update, car)
+            await send_car_with_photos(update, car, show_contact=True)
 
     except Exception as e:
         await update.message.reply_text("Error searching cars ❌")
@@ -43,9 +43,9 @@ async def search_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("No results ❌")
             return ConversationHandler.END
 
-        # Send each car with photos
+        # Send each car with photos and contact button
         for car in cars:
-            await send_car_with_photos(update, car)
+            await send_car_with_photos(update, car, show_contact=True)
 
         return ConversationHandler.END
 

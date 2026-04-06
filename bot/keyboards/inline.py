@@ -23,6 +23,16 @@ def car_actions(car_id):
     return InlineKeyboardMarkup(keyboard)
 
 
+def car_view_actions(car_id):
+    """Create inline keyboard for viewing a car (contact seller)"""
+    keyboard = [
+        [
+            InlineKeyboardButton("📞 Contact Seller", callback_data=f"contact_{car_id}")
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
 def delete_confirmation(car_id):
     """Create inline keyboard for delete confirmation"""
     keyboard = [
@@ -83,3 +93,23 @@ def search_pagination_buttons(query, page, has_more):
         keyboard.append(nav_buttons)
 
     return InlineKeyboardMarkup(keyboard) if keyboard else None
+
+
+def photo_management_menu(car_id, images):
+    """Create inline keyboard for managing car photos"""
+    keyboard = []
+
+    # Add delete button for each photo
+    for idx, img in enumerate(images):
+        keyboard.append([
+            InlineKeyboardButton(
+                f"🗑️ Delete Photo {idx + 1}",
+                callback_data=f"delphoto_{car_id}_{img['id']}"
+            )
+        ])
+
+    # Add action buttons
+    keyboard.append([InlineKeyboardButton("➕ Add More Photos", callback_data=f"addphoto_{car_id}")])
+    keyboard.append([InlineKeyboardButton("✅ Done", callback_data="photodone")])
+
+    return InlineKeyboardMarkup(keyboard)

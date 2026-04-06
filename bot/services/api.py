@@ -111,3 +111,55 @@ def delete_car_image(car_id, image_id, telegram_id):
     )
     res.raise_for_status()
     return res.json()
+
+
+def get_seller_info(car_id):
+    """Get seller information for a car"""
+    res = requests.get(f"{API_URL}/cars/{car_id}/seller", timeout=5)
+    res.raise_for_status()
+    return res.json()
+
+
+def send_message(car_id, from_telegram_id, to_telegram_id, message_text):
+    """Send a message to a seller"""
+    res = requests.post(
+        f"{API_URL}/messages",
+        json={
+            "car_id": car_id,
+            "from_telegram_id": from_telegram_id,
+            "to_telegram_id": to_telegram_id,
+            "message_text": message_text
+        },
+        timeout=5
+    )
+    res.raise_for_status()
+    return res.json()
+
+
+def get_inbox(telegram_id, unread_only=False):
+    """Get messages for a user"""
+    res = requests.get(
+        f"{API_URL}/messages/inbox/{telegram_id}",
+        params={"unread_only": unread_only},
+        timeout=5
+    )
+    res.raise_for_status()
+    return res.json()
+
+
+def mark_message_read(message_id, telegram_id):
+    """Mark a message as read"""
+    res = requests.put(
+        f"{API_URL}/messages/{message_id}/read",
+        params={"telegram_id": telegram_id},
+        timeout=5
+    )
+    res.raise_for_status()
+    return res.json()
+
+
+def get_seller_info(car_id):
+    """Get seller information for a car"""
+    res = requests.get(f"{API_URL}/cars/{car_id}/seller", timeout=5)
+    res.raise_for_status()
+    return res.json()

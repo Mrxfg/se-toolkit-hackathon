@@ -6,9 +6,11 @@ import re
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 from services.api import get_user_cars, update_car, geocode_location, get_car_images, upload_car_image, delete_car_image
-from keyboards.inline import edit_menu
+from keyboards.inline import edit_menu, photo_management_menu
 from keyboards.menus import post_edit_menu
 from states import EDIT_FIELD_SELECT, EDIT_VALUE_INPUT
+import base64
+import io
 
 
 async def start_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -106,6 +108,64 @@ async def edit_field_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("Edit cancelled")
         return ConversationHandler.END
 
+    # Handle photo deletion
+    if query.data.startswith("delphoto_"):
+        parts = query.data.split("_")
+        car_id = parts[1]
+        image_id = parts[2]
+        tid = update.effective_user.id
+
+        try:
+            delete_car_image(car_id, image_id, tid)
+
+            # Refresh photo list
+            images = get_car_images(car_id)
+            photo_count = len(images)
+
+            if photo_count == 0:
+                await query.edit_message_text(
+                    "✅ Photo deleted!\n\n📸 No photos remaining.\n\nSend photos or type 'done'."
+                )
+                context.user_data["managing_photos"] = True
+                return EDIT_VALUE_INPUT
+            else:
+                await query.edit_message_text(
+                    f"✅ Photo deleted!\n\n📸 Current photos: {photo_count}/5\n\nSelect action:",
+                    reply_markup=photo_management_menu(car_id, images)
+                )
+                return EDIT_FIELD_SELECT
+        except Exception as e:
+            await query.answer("Error deleting photo ❌", show_alert=True)
+            return EDIT_FIELD_SELECT
+
+    # Handle add more photos
+    if query.data.startswith("addphoto_"):
+        car_id = query.data.split("_")[1]
+        try:
+            images = get_car_images(car_id)
+            remaining = 5 - len(images)
+
+            if remaining <= 0:
+                await query.answer("Maximum 5 photos reached", show_alert=True)
+                return EDIT_FIELD_SELECT
+
+            await query.edit_message_text(
+                f"📸 Send up to {remaining} more photo(s) or type 'done' to finish."
+            )
+            context.user_data["managing_photos"] = True
+            return EDIT_VALUE_INPUT
+        except:
+            await query.answer("Error ❌", show_alert=True)
+            return EDIT_FIELD_SELECT
+
+    # Handle photo done
+    if query.data == "photodone":
+        context.user_data.pop("managing_photos", None)
+        car_data = context.user_data["edit_car_data"]
+        car_info = f"🚗 {car_data['make']} {car_data['model']} ({car_data['year']})\n💰 ${car_data['price']}\n📏 {car_data['mileage']} km\n\nSelect another field or save:"
+        await query.edit_message_text(car_info, reply_markup=edit_menu())
+        return EDIT_FIELD_SELECT
+
     # Handle field selection
     if query.data.startswith("editfield_"):
         field = query.data.replace("editfield_", "")
@@ -128,15 +188,20 @@ async def edit_field_select(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 images = get_car_images(car_id)
                 photo_count = len(images)
-                remaining = 5 - photo_count
 
-                await query.edit_message_text(
-                    f"📸 Current photos: {photo_count}/5\n\n"
-                    f"Send up to {remaining} more photo(s) or type 'done' to finish.\n"
-                    f"Type 'delete' to remove all photos."
-                )
-                context.user_data["managing_photos"] = True
-                return EDIT_VALUE_INPUT
+                if photo_count == 0:
+                    await query.edit_message_text(
+                        "📸 No photos yet.\n\nSend photos (up to 5) or type 'done' to finish."
+                    )
+                    context.user_data["managing_photos"] = True
+                    return EDIT_VALUE_INPUT
+                else:
+                    # Show photos with delete buttons
+                    await query.edit_message_text(
+                        f"📸 Current photos: {photo_count}/5\n\nSelect action:",
+                        reply_markup=photo_management_menu(car_id, images)
+                    )
+                    return EDIT_FIELD_SELECT
             except:
                 await query.edit_message_text("Error loading photos ❌")
                 return EDIT_FIELD_SELECT
@@ -161,22 +226,6 @@ async def edit_value_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if context.user_data.get("managing_photos"):
             car_id = context.user_data["edit_car_id"]
             tid = update.effective_user.id
-
-            # Handle delete all photos
-            if value and value.lower() == "delete":
-                try:
-                    images = get_car_images(car_id)
-                    for img in images:
-                        delete_car_image(car_id, img['id'], tid)
-                    await update.message.reply_text("✅ All photos deleted")
-                except:
-                    await update.message.reply_text("❌ Error deleting photos")
-
-                context.user_data.pop("managing_photos", None)
-                car_data = context.user_data["edit_car_data"]
-                car_info = f"🚗 {car_data['make']} {car_data['model']} ({car_data['year']})\n💰 ${car_data['price']}\n📏 {car_data['mileage']} km\n\nSelect another field or save:"
-                await update.message.reply_text(car_info, reply_markup=edit_menu())
-                return EDIT_FIELD_SELECT
 
             # Handle done
             if value and value.lower() in ['done', 'finish']:

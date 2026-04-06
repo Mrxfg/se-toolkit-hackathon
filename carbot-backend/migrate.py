@@ -19,7 +19,8 @@ def run_migrations():
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 telegram_id BIGINT,
-                name VARCHAR(255)
+                name VARCHAR(255),
+                telegram_username VARCHAR(255)
             );
         """)
 
@@ -47,6 +48,21 @@ def run_migrations():
                 image_order INTEGER DEFAULT 0,
                 uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+            );
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                car_id INTEGER NOT NULL,
+                from_user_id INTEGER NOT NULL,
+                to_user_id INTEGER NOT NULL,
+                message_text TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_read BOOLEAN DEFAULT FALSE,
+                FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
+                FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE
             );
         """)
 
@@ -176,6 +192,27 @@ def run_migrations():
         print("9. Creating indexes for car_images...")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_car_images_car_id ON car_images (car_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_car_images_order ON car_images (car_id, image_order);")
+
+        # Add indexes for messages
+        print("10. Creating indexes for messages...")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_car_id ON messages (car_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_from_user ON messages (from_user_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_to_user ON messages (to_user_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages (to_user_id, is_read);")
+
+        # Add telegram_username column if it doesn't exist
+        print("11. Adding telegram_username column to users...")
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='users' AND column_name='telegram_username'
+                ) THEN
+                    ALTER TABLE users ADD COLUMN telegram_username VARCHAR(255);
+                END IF;
+            END $$;
+        """)
 
         conn.commit()
         print("\n✅ All migrations completed successfully!")
